@@ -1,20 +1,86 @@
 ---
 layout: post
-title:      "Sinatra Project "
-date:       2020-12-12 04:34:18 +0000
+title:      "Sinatra: Protecting Your Dynamic Routes"
+date:       2020-12-11 23:34:20 -0500
 permalink:  sinatra_project
 ---
 
 
+   When building a web app it's important to protect your data. One way we do this is to limit the data that gets passed to and from our view files. Unfortunately we need to pass some data around due to HTTP being stateless. This means we are bound to expose some information to the user. With forms we can give users a chance to change the dynamic route that the form is being sent back to.
+	
+  I created a web app to create and store motorcycles in a personal garage. When I create a form to patch my object, it leaves this html exposed to the user:
+	
+```
+<form method="POST" action="/motorcycles/1">
+  <input type="hidden" name="_method" value="patch">
+  ...
+```
 
-    I've really enjoyed building in Sinatra, and learning the basics of having real structure supporting your code. What they say is certainly true though, the more you learn the less you know. It seems every step of the way has led me down a rabbit hole of knowledge with no end in sight. It would be wonderful if time weren't an issue and you could explore every tangent to your hearts content. Unfortunately, projects have deadlines.
- 
-     One lesson that I learned from this project was the importance of making code that's easy to add to or change. It's tempting to build out everything you think the project will do ahead of time. However the code you think your project needs will likely not be sufficient when it comes time to implement it. Getting just the bare minimum down to point you towards your final destination is key, and may save you a lot of time. 
-		 
-		 In my project the things that sounded easy in my head took the longest. Halfway through I decided to change the name of an Objects attribute, and hunting down all the places I called on that attribute took some time. I can only imagine how this problem would compound in a much larger application. It was a good lesson in the value of planning and consistent design. Had I spent a little more time on the bigger picture framework before hashing out some smaller details I likely wouldv'e had less code to change.
-		 
-		 Something that I found to be very easy though is implementing improved methods after the main project has been built. At that point it's easy to spot repetetive or messy code, and build smarter methods to handle it. 
-		 
-		 At the end of the day I feel the hardest part is knowing when to stop. I feel I could spend forever adding more to the application. And that's before even getting into the styling of it. I feel I'm happy with what I've made, but not content with it. Nothing is perfect, but I'll keep trying to learn more to get closer to that unattainable goal.
-		 
-		 
+
+  If you were to change the 1 to a number that matched the ID of another motorcycle, and submitted the form, you could very well end up changing the attributes of another motorcycle object. I found two ways of preventing this for my app. 
+
+  One way was by authenticating the user had the authority to edit the object sent  to the patch request. I enabled sessions in my app and when logging into my site a session key of [:user_id] is set to the users ID. This keeps track of what user is currently signed in, which will allow us to verify a users identity. At the beginning of the patch request I found the motorcycle object requested by the params{;id] key. 
+
+```
+patch '/motorcycles/:id' do
+  motorcycle = Motorcycle.find_by_id(params[:id])
+  redirect_if_not_owner(motorcycle)
+  ...
+```
+
+Then, in a class helper method, I checked to see if the motorcycle object belonged to the currently signed in user based on the current session[:user_id].
+
+```
+def redirect_if_not_owner(motorcycle)
+  if motorcycle.user.id != session[:user_id]
+    flash[:message] = "You may Only Edit Your Own Motorcycle"
+    redirect '/motorcycles'
+  end
+end
+```
+		
+  If the post methods route is changed to a motorcycle that doesn't belong to the user and then the form is sent, the motorcycle.user.id will not equal the session[:user_id] and the form will redirect to another route.
+		
+  This works because of the objects relationships defined in ActiveRecord. Since the motorcycle 'belongs_to' a user you can check it's user ID. However what if you were dealing with an object that doesn't belong to you? The object wouldn't have an ID for you to compare with your session[:user_id]. I ran into this issue when editing motorcycle brands on my site. For this I created a new key => value pair in the session hash when a get request was sent to a specific brands edit page. 
+		
+```
+get '/brands/:id/edit' do
+  redirect_if_not_logged_in
+  @brand = Brand.find_by_id(params[:id])
+  redirect_if_bad_route(@brand)
+
+  ###  set session[:brand_id] to the brand.id  ###
+  session[:brand_id] = @brand.id
+
+  erb :'brands/edit'
+end
+```
+		
+  Then when the patch request is received,I find the brand based on the params passed in from the form. Then I call a method to redirect in case the ID of the brand just passed in differs from the original edit get request.
+		
+```
+patch '/brands/:id' do
+  brand = Brand.find_by_id(params[:id])
+  redirect_for_wrong_brand(brand)
+  ...
+```
+		
+```
+def redirect_for_wrong_brand(brand)
+  if brand.id != session[:brand_id]
+    flash[:message] = "Invalid Brand Change"
+    redirect "/brands"
+  end
+end
+```
+			
+  If the params[:id] key changed on the form submission, a different brand will be found in the patch route, and it's ID will not match the ID stored in the session key. This ensures the object initially requested for editing is the same as the object that's being patched, and keeps the ID that's being used for confirmation out of the users reach. 
+			
+  These are both small but important steps you can take to keep users from accessing and editing your data.
+			
+Link to app repository: (https://github.com/J5Wood/motorcycle-garage)
+	
+		
+		
+		
+		
