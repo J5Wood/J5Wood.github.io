@@ -1,11 +1,11 @@
 # Site settings
 author: Jeremy Wood
-title: Not a coder
+title: Not yet a coder
 header-img: img/home-bg.png
 email: js.wood206@gmail.com
 copyright_name: Jeremy Wood
 description: > # this means to ignore newlines until "baseurl:"
-  But maybe someday
+  But I'm working on it
 baseurl: "" # the subpath of your site, e.g. /blog
 twitter_username: 
 github_username:  J5Wood
