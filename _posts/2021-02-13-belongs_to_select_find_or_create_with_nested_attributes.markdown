@@ -14,10 +14,10 @@ accepts_nested_attributes_for :brand, reject_if: proc { |attributes| attributes[
 You can pass whatever validation logic you need to the reject_if block. In my case, I checked whether anything was being passed into the attribute for brand name. If there was no name present, the nested attributes would be rejected and the parent_id would remain on the child object. If the nested attributes did include a name, a new brand would be found or created based on the name passed in. And thanks to the code above both objects are instantiated by just passing your strong params to the child object when it's created or updated. Otherwise you'd have to make a workaround like this:
 
 ```
-def brand_attributes=(attr) \n
-  if !attr[:name].blank? \n
-    self.brand = Brand.find_or_create_by(name: attr[:name], location: attr[:location]) \n
-  end \n
+def brand_attributes=(attr);
+  if !attr[:name].blank?;
+    self.brand = Brand.find_or_create_by(name: attr[:name], location: attr[:location]);
+  end;
 end 
 ```
 			
